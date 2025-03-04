@@ -1,1 +1,134 @@
 
+# Simulated conversation loop with multiple FAQ categories
+
+import spacy
+import random
+import re
+
+# Load the spaCy language model
+nlp = spacy.load("en_core_web_sm")
+
+# Define different categories of frequently asked questions (FAQs)
+faq_general = [
+    (r"hi|hello|hey", ["Hello! How can I help you today?", "Hey there! What's up?", "Hi! How can I assist you?"]),
+    (r"what is your name?", ["I'm a chatbot, and I don't have a name, but you can call me ChatBot!"]),
+    (r"how are you?", ["I'm just a program, but I'm doing great! How about you?"]),
+    (r"quit|exit|bye", ["Goodbye! Have a great day!", "Bye! See you later!", "Take care!"]),
+]
+
+faq_help = [
+    (r"i need (.*)", ["Why do you need %1?", "How would you like to get %1?", "Can you tell me more about needing %1?"]),
+    (r"what is (.*)", ["I can help you understand %1. Can you clarify more?", "Do you want me to explain %1?", "Tell me more about %1!"]),
+]
+
+faq_technical = [
+    (r"what is python?", ["Python is a programming language that lets you work quickly and integrate systems more effectively.", "Python is an easy-to-learn, powerful programming language."]),
+    (r"what is machine learning?", ["Machine learning is a branch of artificial intelligence where systems learn from data and improve over time."]),
+]
+
+# Combine all FAQ categories
+faq_dicts = [faq_general, faq_help, faq_technical]
+
+# Define quiz questions and answers
+quiz_questions = [
+    {
+        'question': 'What is the capital of France?',
+        'answer': 'paris'
+    },
+    {
+        'question': 'Who wrote the play "Romeo and Juliet"?',
+        'answer': 'william shakespeare'
+    },
+    {
+        'question': 'What is 2 + 2?',
+        'answer': '4'
+    }
+]
+
+# Function to use spaCy for sentence processing
+def process_sentence(sentence):
+    doc = nlp(sentence.lower())
+    return doc
+
+# Chatbot response generation with multiple FAQ dictionaries using match-case
+def chatbot_response(user_input):
+    user_input = process_sentence(user_input)
+    
+    for faq_category in faq_dicts:
+        for pattern, responses in faq_category:
+            if re.search(pattern, user_input.text):
+                return random.choice(responses)
+
+    # Using match-case for response logic
+    match user_input.text:
+        case "hi" | "hello" | "hey":
+            return random.choice(["Hello! How can I help you today?", "Hey there! What's up?", "Hi! How can I assist you?"])
+        case "what is your name?":
+            return "I'm a chatbot, and I don't have a name, but you can call me ChatBot!"
+        case "how are you?":
+            return "I'm just a program, but I'm doing great! How about you?"
+        case "quit" | "exit" | "bye":
+            return random.choice(["Goodbye! Have a great day!", "Bye! See you later!", "Take care!"])
+        case _:
+            return "I'm sorry, I didn't get that. Can you ask something else?"
+
+# Function to handle the quiz
+def quiz():
+    print("\nLet's play a quiz!")
+    score = 0
+    
+    for question in quiz_questions:
+        print(f"Question: {question['question']}")
+        user_answer = input("Your answer: ").strip().lower()
+        
+        if user_answer == question['answer']:
+            print("Correct!")
+            score += 1
+        else:
+            print(f"Incorrect. The correct answer was: {question['answer']}")
+        
+    print(f"\nQuiz Over! Your final score is: {score}/{len(quiz_questions)}")
+
+# Function to add background color and text color to the terminal output inside containers
+def print_colored(text, background_color='44', text_color='37'):
+    """Print text with a given background and text color in the terminal inside a container."""
+    # Create a container with borders around the text
+    border = "-" * (len(text) + 4)  # Add padding around text
+    print(f"\033[{background_color};{text_color}m{border}\033[0m")  # Top border
+    print(f"\033[{background_color};{text_color}m|  {text}  |\033[0m")  # Text inside the container
+    print(f"\033[{background_color};{text_color}m{border}\033[0m")  # Bottom border
+
+def chat():
+    print_colored("Hello! I'm a chatbot. Type 'quit' to exit.", background_color='46', text_color='30')  # Cyan background, black text
+    
+    while True:
+        user_input = input("\nYou: ").strip().lower()
+        
+        if user_input in ['quit', 'exit', 'bye']:
+            print_colored("Goodbye! Have a great day!", background_color='41', text_color='37')  # Red background, white text
+            break
+        
+        response = chatbot_response(user_input)
+        print_colored("ChatBot: " + response, background_color='47', text_color='30')  # White background, black text
+
+# Main interaction loop
+def main():
+    while True:
+        print("\n1. Chat with me")
+        print("2. Take a quiz")
+        print("3. Exit")
+        choice = input("Choose an option: ").strip()
+
+        if choice == '1':
+            chat()  # Proceed with chatbot conversation
+        elif choice == '2':
+            quiz()  # Proceed with quiz
+        elif choice == '3':
+            print_colored("Goodbye! Have a great day!", background_color='41', text_color='37')  # Red background, white text
+            break
+        else:
+            print_colored("Invalid option. Please choose again.", background_color='43', text_color='30')  # Yellow background, black text
+
+# Run the chatbot
+if __name__ == "__main__":
+    main()
