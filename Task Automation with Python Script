@@ -1,1 +1,113 @@
+import os
+import shutil
+import logging
+import time
+import schedule
+from google.colab import drive
+import ipywidgets as widgets
+from IPython.display import display
 
+# Mount Google Drive
+try:
+    drive.mount('/content/drive')
+    print("Google Drive mounted successfully!")
+except Exception as e:
+    print(f"Error mounting Google Drive: {e}")
+    raise
+
+# Define the path to the folder in Google Drive (e.g., a "Downloads" folder in Drive)
+downloads_folder = "/content/drive/My Drive/Downloads"  # Update this path to your desired folder
+
+# Define the destination folders for different file types
+file_types = {
+    "Images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg"],
+    "Documents": [".pdf", ".docx", ".txt", ".xlsx", ".pptx", ".csv"],
+    "Videos": [".mp4", ".mov", ".avi", ".mkv"],
+    "Music": [".mp3", ".wav", ".aac"],
+    "Archives": [".zip", ".rar", ".tar", ".gz"],
+    "Executables": [".exe", ".msi", ".dmg"],
+    "Others": []  # For files that don't match any category
+}
+
+# Set up logging
+logging.basicConfig(filename='/content/drive/My Drive/file_organizer.log', level=logging.INFO,
+                    format='%(asctime)s - %(message)s')
+
+# Function to organize files
+def organize_files():
+    try:
+        # Create the destination folders if they don't exist
+        for folder_name in file_types.keys():
+            folder_path = os.path.join(downloads_folder, folder_name)
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+
+        # Organize files
+        for filename in os.listdir(downloads_folder):
+            file_path = os.path.join(downloads_folder, filename)
+
+            # Skip directories
+            if os.path.isdir(file_path):
+                continue
+
+            # Get the file extension
+            _, file_extension = os.path.splitext(filename)
+            file_extension = file_extension.lower()
+
+            # Find the appropriate folder for the file
+            moved = False
+            for folder_name, extensions in file_types.items():
+                if file_extension in extensions:
+                    destination_folder = os.path.join(downloads_folder, folder_name)
+                    shutil.move(file_path, os.path.join(destination_folder, filename))
+                    logging.info(f"Moved {filename} to {folder_name}")
+                    moved = True
+                    break
+
+            # If the file type is not recognized, move it to the "Others" folder
+            if not moved:
+                destination_folder = os.path.join(downloads_folder, "Others")
+                shutil.move(file_path, os.path.join(destination_folder, filename))
+                logging.info(f"Moved {filename} to Others")
+
+        print("File organization complete!")
+        logging.info("File organization complete!")
+        output.value = "File organization complete!"
+
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        output.value = f"An error occurred: {e}"
+
+# Function to schedule the task
+def schedule_task(interval):
+    try:
+        schedule.every(interval).minutes.do(organize_files)
+        output.value = f"Task scheduled to run every {interval} minutes."
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+    except Exception as e:
+        logging.error(f"Scheduling Error: {e}")
+        output.value = f"Scheduling Error: {e}"
+
+# GUI with ipywidgets
+organize_button = widgets.Button(description="Organize Now")
+schedule_button = widgets.Button(description="Schedule")
+interval_input = widgets.IntText(value=10, description="Interval (minutes):")
+output = widgets.Output()
+
+# Button click handlers
+def on_organize_button_click(b):
+    with output:
+        organize_files()
+
+def on_schedule_button_click(b):
+    with output:
+        schedule_task(interval_input.value)
+
+# Attach handlers to buttons
+organize_button.on_click(on_organize_button_click)
+schedule_button.on_click(on_schedule_button_click)
+
+# Display the GUI
+display(widgets.VBox([organize_button, interval_input, schedule_button, output]))
